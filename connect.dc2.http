@@ -1,0 +1,39 @@
+@baseUrl = http://localhost:28083
+
+### Plugins
+GET {{baseUrl}}/connector-plugins HTTP/1.1
+
+### GET STATUS
+GET {{baseUrl}}/connectors/replicator/status
+
+### DESCRIBE
+GET {{baseUrl}}/connectors/replicator
+
+### GET CONNECTORS LIST
+GET {{baseUrl}}/connectors
+
+### STOP
+DELETE {{baseUrl}}/connectors/replicator HTTP/1.1
+
+### Create replicator instance
+PUT {{baseUrl}}/connectors/replicator/config HTTP/1.1
+Content-Type: application/json
+
+{
+    "connector.class": "io.confluent.connect.replicator.ReplicatorSourceConnector",
+    "topic.whitelist": "pageviews",
+    "key.converter": "io.confluent.connect.replicator.util.ByteArrayConverter",
+    "value.converter": "io.confluent.connect.replicator.util.ByteArrayConverter",
+    "src.kafka.bootstrap.servers": "kafka-dc1:9092",
+    "src.consumer.group.id": "replicator-dc2-to-dc1-topic1",
+    "src.consumer.interceptor.classes": "io.confluent.monitoring.clients.interceptor.MonitoringConsumerInterceptor",
+    "src.consumer.confluent.monitoring.interceptor.bootstrap.servers": "kafka-dc1:9092",
+    "src.kafka.timestamps.topic.replication.factor": 1,
+    "src.kafka.timestamps.producer.interceptor.classes": "io.confluent.monitoring.clients.interceptor.MonitoringProducerInterceptor",
+    "src.kafka.timestamps.producer.confluent.monitoring.interceptor.bootstrap.servers": "kafka-dc1:9092",
+    "dest.kafka.bootstrap.servers": "kafka-dc2:9092",
+    "confluent.topic.replication.factor": 1,
+    "provenance.header.enable": "true",
+    "header.converter": "io.confluent.connect.replicator.util.ByteArrayConverter",
+    "tasks.max": "1"
+}

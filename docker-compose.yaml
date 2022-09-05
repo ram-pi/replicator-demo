@@ -1,0 +1,152 @@
+version: '3.8'
+services:
+    # ZOOKEEPER DC-1
+    zookeeper-dc1:
+      container_name: "zookeeper-dc1"
+      image: confluentinc/cp-zookeeper:${CF_TAG}
+      environment:
+        ZOOKEEPER_CLIENT_PORT: 2181
+        ZOOKEEPER_TICK_TIME: 2000
+        KAFKA_OPTS: "-Dzookeeper.4lw.commands.whitelist=*"
+      ports:
+        - 2181:2181
+      cap_add:
+        - NET_ADMIN
+    # KAFKA DC-1 
+    kafka-dc1:
+      container_name: "kafka-dc1"
+      image: confluentinc/cp-server:${CF_TAG}
+      hostname: kafka-dc1
+      depends_on:
+        - zookeeper-dc1
+      environment:
+        KAFKA_ZOOKEEPER_CONNECT: "zookeeper-dc1:2181"
+        KAFKA_LISTENERS: "INTERNAL://:9092, EXTERNAL://:19092"
+        KAFKA_ADVERTISED_LISTENERS: "INTERNAL://kafka-dc1:9092, EXTERNAL://localhost:19092"
+        KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "INTERNAL:PLAINTEXT, EXTERNAL:PLAINTEXT"
+        KAFKA_INTER_BROKER_LISTENER_NAME: "INTERNAL"
+        KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+        KAFKA_CONFLUENT_LICENSE_TOPIC_REPLICATION_FACTOR: 1
+        KAFKA_CONFLUENT_BALANCER_TOPIC_REPLICATION_FACTOR: 1
+        CONFLUENT_METRICS_REPORTER_TOPIC_REPLICAS: 1
+        KAFKA_BROKER_ID: "1"
+        KAFKA_DELETE_TOPIC_ENABLE: "true"
+      ports:
+        - 19092:19092
+      cap_add:
+        - NET_ADMIN
+    # CONNECT DC-1
+    connect-dc1:
+      image: confluentinc/cp-kafka-connect:${CF_TAG}
+      hostname: connect-dc1
+      container_name: connect-dc1
+      # volumes:
+      #   - ./connect-components:/usr/share/confluent-hub-components
+      depends_on:
+        - kafka-dc1
+      ports:
+        - "8083:8083"
+      environment:
+        CONNECT_BOOTSTRAP_SERVERS: 'kafka-dc1:9092'
+        CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 1
+        CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 1
+        CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
+        CONNECT_CONFIG_STORAGE_TOPIC: connect-configs-dc1
+        CONNECT_OFFSET_STORAGE_TOPIC: connect-offsets-dc1
+        CONNECT_STATUS_STORAGE_TOPIC: connect-status-dc1
+        CONNECT_REST_ADVERTISED_HOST_NAME: connect-dc1
+        # CONNECT_REST_ADVERTISED_PORT: 8083
+        CONNECT_GROUP_ID: connect-group-dc1
+        CONNECT_OFFSET_FLUSH_INTERVAL_MS: 10000
+        CONNECT_KEY_CONVERTER: "org.apache.kafka.connect.storage.StringConverter"
+        CONNECT_VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
+        CONNECT_PLUGIN_PATH: "/usr/share/java,/usr/share/confluent-hub-components"
+        CONNECT_LOG4J_LOGGERS: org.apache.zookeeper=ERROR,org.I0Itec.zkclient=ERROR,org.reflections=ERROR,org.apache.kafka.connect=DEBUG
+      command: 
+        - bash
+        - -c
+        - |
+          echo "Installing Connector"
+          confluent-hub install --no-prompt confluentinc/kafka-connect-datagen:0.5.3 
+          confluent-hub install --no-prompt confluentinc/kafka-connect-replicator:7.2.1
+          #
+          echo "Launching Kafka Connect worker"
+          /etc/confluent/docker/run &
+          #
+          sleep infinity
+    # ZOOKEEPER DC-2
+    zookeeper-dc2:
+      container_name: "zookeeper-dc2"
+      image: confluentinc/cp-zookeeper:${CF_TAG}
+      environment:
+        ZOOKEEPER_CLIENT_PORT: 2181
+        ZOOKEEPER_TICK_TIME: 2000
+        KAFKA_JMX_HOSTNAME: localhost
+        KAFKA_OPTS: "-Dzookeeper.4lw.commands.whitelist=*"
+      ports:
+        - 2182:2181
+      cap_add:
+        - NET_ADMIN
+    # KAFKA DC-1 
+    kafka-dc2:
+      container_name: "kafka-dc2"
+      image: confluentinc/cp-server:${CF_TAG}
+      hostname: kafka-dc2
+      depends_on:
+        - zookeeper-dc2
+      environment:
+        KAFKA_ZOOKEEPER_CONNECT: "zookeeper-dc2:2181"
+        KAFKA_LISTENERS: "INTERNAL://:9092, EXTERNAL://:29092"
+        KAFKA_ADVERTISED_LISTENERS: "INTERNAL://kafka-dc2:9092, EXTERNAL://localhost:29092"
+        KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "INTERNAL:PLAINTEXT, EXTERNAL:PLAINTEXT"
+        KAFKA_INTER_BROKER_LISTENER_NAME: "INTERNAL"
+        KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+        KAFKA_CONFLUENT_LICENSE_TOPIC_REPLICATION_FACTOR: 1
+        KAFKA_CONFLUENT_BALANCER_TOPIC_REPLICATION_FACTOR: 1
+        CONFLUENT_METRICS_REPORTER_TOPIC_REPLICAS: 1
+        KAFKA_BROKER_ID: "1"
+        KAFKA_DELETE_TOPIC_ENABLE: "true"
+      ports:
+        - 29092:29092
+      cap_add:
+        - NET_ADMIN
+    # CONNECT DC-2
+    connect-dc2:
+      image: confluentinc/cp-kafka-connect:${CF_TAG}
+      hostname: connect-dc2
+      container_name: connect-dc2
+      # volumes:
+      #   - ./connect-components:/usr/share/confluent-hub-components
+      depends_on:
+        - kafka-dc2
+      ports:
+        - "28083:28083"
+      environment:
+        CONNECT_BOOTSTRAP_SERVERS: 'kafka-dc2:9092'
+        CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 1
+        CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 1
+        CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
+        CONNECT_CONFIG_STORAGE_TOPIC: connect-configs-dc2
+        CONNECT_OFFSET_STORAGE_TOPIC: connect-offsets-dc2
+        CONNECT_STATUS_STORAGE_TOPIC: connect-status-dc2
+        CONNECT_REST_ADVERTISED_HOST_NAME: connect-dc2
+        CONNECT_REST_PORT: 28083
+        CONNECT_REST_ADVERTISED_PORT: 28083
+        CONNECT_LISTENERS: http://connect-dc2:28083,http://localhost:28083
+        CONNECT_GROUP_ID: connect-group-dc2
+        CONNECT_OFFSET_FLUSH_INTERVAL_MS: 10000
+        CONNECT_KEY_CONVERTER: "org.apache.kafka.connect.storage.StringConverter"
+        CONNECT_VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
+        CONNECT_PLUGIN_PATH: "/usr/share/java,/usr/share/confluent-hub-components"
+        CONNECT_LOG4J_LOGGERS: org.apache.zookeeper=ERROR,org.I0Itec.zkclient=ERROR,org.reflections=ERROR,org.apache.kafka.connect=DEBUG
+      command: 
+        - bash
+        - -c
+        - |
+          echo "Installing Connector"
+          confluent-hub install --no-prompt confluentinc/kafka-connect-replicator:7.2.1
+          #
+          echo "Launching Kafka Connect worker"
+          /etc/confluent/docker/run &
+          #
+          sleep infinity
