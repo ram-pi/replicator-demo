@@ -36,4 +36,7 @@ As above, use [this](connect.dc2.http) if you have _REST Client_.
 
 ## Check
 
+Via command line:  
 `kcat -b localhost:29092 -C -t pageviews`
+
+You can also check replicators metrics on C3 on the replicators section for the DC2 cluster.

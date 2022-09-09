@@ -1,22 +1,23 @@
 @baseUrl = http://localhost:28083
+@connectorName = replicator
 
 ### Plugins
 GET {{baseUrl}}/connector-plugins HTTP/1.1
 
 ### GET STATUS
-GET {{baseUrl}}/connectors/replicator/status
+GET {{baseUrl}}/connectors/{{connectorName}}/status
 
 ### DESCRIBE
-GET {{baseUrl}}/connectors/replicator
+GET {{baseUrl}}/connectors/{{connectorName}}
 
 ### GET CONNECTORS LIST
 GET {{baseUrl}}/connectors
 
 ### STOP
-DELETE {{baseUrl}}/connectors/replicator HTTP/1.1
+DELETE {{baseUrl}}/connectors/{{connectorName}} HTTP/1.1
 
 ### Create replicator instance
-PUT {{baseUrl}}/connectors/replicator/config HTTP/1.1
+PUT {{baseUrl}}/connectors/{{connectorName}}/config HTTP/1.1
 Content-Type: application/json
 
 {
@@ -34,6 +35,10 @@ Content-Type: application/json
     "dest.kafka.bootstrap.servers": "kafka-dc2:9092",
     "confluent.topic.replication.factor": 1,
     "provenance.header.enable": "true",
+    "topic.timestamp.type": "LogAppendTime",
     "header.converter": "io.confluent.connect.replicator.util.ByteArrayConverter",
     "tasks.max": "1"
 }
+
+### REPLICATOR METRICS
+GET {{baseUrl}}/ReplicatorMetrics
